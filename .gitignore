@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment (The culprit of the 460 files)
+venv/
+env/
+.env
+
+# Database
+*.db
+*.sqlite3
+postgres_data/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
