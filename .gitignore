@@ -41,3 +41,4 @@ backend/id_map.pkl
 # --- Generated Media / Uploads ---
 backend/static/audio/*
 backend/static/uploads/*
+backend/static/images/*

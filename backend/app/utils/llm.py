@@ -23,6 +23,22 @@ def get_model():
         )
     return _model_instance
 
+def unload_model():
+    """Removes Phi-3 LLM from GPU/RAM to free VRAM."""
+    global _model_instance
+    if _model_instance is not None:
+        print("🪓 Unloading Phi-3 LLM from memory...")
+        del _model_instance
+        _model_instance = None
+        
+        # PyTorch/CUDA cleanup
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass # Ignore if torch isn't used
+        
 def generate_narration(scene_content: str, characters: list) -> dict:
     llm = get_model()
     char_str = ", ".join(characters) if characters else "Unknown characters"

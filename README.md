@@ -1,56 +1,49 @@
 # Historabook: Interactive Multimodal Teaching Assistant
 
-**Historabook** is an open-source, offline-capable AI teaching assistant. It ingests books/documents, understands their content, and teaches them to the user via interactive voice narration, real-time visuals, and structured pedagogy.
+**Overview:** Historabook is an open-source, offline-capable AI system that reads, understands, and teaches any book or document. It features multi-speaker narration, real-time interactive voice Q&A (RAG), and generates contextual visual drafts (using SD-Turbo) for every lesson segment.
 
-## 🚀 Current Status (Day 2 Complete)
-- **Infrastructure:** Dockerized Postgres (Database) and Redis (Cache).
-- **Backend:** FastAPI server initialized with SQLAlchemy ORM.
-- **Database:** Connection established; `Catalog` model created.
+## 🚀 Final MVP Status (Day 31 Complete)
 
----
+You have successfully built the full MVP (Minimum Viable Product).
 
-## 🛠️ Tech Stack
-- **Language:** Python 3.11+
-- **API Framework:** FastAPI
-- **Database:** PostgreSQL 15 (via Docker)
-- **Caching:** Redis 7 (via Docker)
-- **ORM:** SQLAlchemy
-- **Server:** Uvicorn
+| Feature | Status | Notes |
+| :--- | :--- | :--- |
+| **LLM Planner** | ✅ **Active** | Phi-3 LLM generates structured, multi-segment lesson plans. |
+| **Visuals (Tier A)** | ✅ **Active** | SD-Turbo runs on GPU via VRAM Swapper, generating low-latency image drafts. |
+| **Audio/Voice** | ✅ **Active** | Piper TTS (realistic voice) and Whisper ASR (microphone input) are fully integrated. |
+| **Intelligence Core** | ✅ **Active** | FAISS Vector Store enables context-aware answering (RAG). |
 
 ---
 
-## ⚡ Quick Start (Windows)
+## 🛠️ Tech Stack & Components
 
-### 1. Prerequisites
-- Docker Desktop (Running)
-- Python 3.10+ (or Anaconda)
+| Component | Tool / Model | License |
+| :--- | :--- | :--- |
+| **Orchestration** | FastAPI, Python 3.10+ | MIT |
+| **Database** | PostgreSQL (via Docker) | PostgreSQL |
+| **Vector DB** | FAISS, Sentence Transformers | MIT / Apache 2.0 |
+| **LLM/Brain** | Phi-3 Mini (GGUF) | MIT |
+| **TTS/Voice** | Piper TTS (ONNX) | MIT |
+| **ASR/Ears** | OpenAI Whisper | MIT |
+| **Visuals** | SD-Turbo, Diffusers | Stability AI (Open RAIL++-M) |
 
-### 2. Setup Environment
-1. Clone the repo and enter the directory:
-   ```powershell
-   cd Historabook
+---
 
-## Start the Infrastructure (Database & Cache):
-docker compose up -d
+## ⚙️ Installation & Setup Guide (RTX 4050 Optimized)
 
-## Configure Environment Variables:
-Create a .env file in backend/ with the following:
-PROJECT_NAME="Historabook"
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=changeme
-POSTGRES_SERVER=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=historabook_db
-DATABASE_URL=postgresql://postgres:changeme@localhost/historabook_db
+### **Prerequisites**
 
-## . Run the Server
-Navigate to the backend folder and start the server:
-cd backend
-### Using standard Python
-python -m uvicorn app.main:app --reload --port 8001
+1.  **Python 3.10 or 3.11:** Required for stable PyTorch/CUDA linking (Python 3.13 is incompatible).
+2.  **Docker Desktop:** Running (for Postgres and Redis).
+3.  **FFmpeg:** Installed and accessible in the system PATH (required for Whisper).
 
-### OR if using Anaconda path directly:
-& C:/ProgramData/anaconda3/python.exe -m uvicorn app.main:app --reload --port 8001
+### **Step 1: Create a Stable Python Environment**
 
+*You must create a new environment to resolve the Python 3.13/PyTorch conflict.*
 
-catalog_id : 46919a93-ffe0-4aad-b928-0d598b86cfb2
+```powershell
+# 1. Create Python 3.10 environment
+conda create -n historabook_env python=3.10 -y
+
+# 2. Activate it
+conda activate historabook_env

@@ -1,12 +1,34 @@
-fastapi uvicorn python-dotenv pydantic
-psycopg2-binary sqlalchemy alembic
-python-multipart 
+# --- CORE INFRASTRUCTURE & API (Day 1-3) ---
+fastapi
+uvicorn
+python-dotenv
+pydantic
 sqlalchemy
-pymupdf aiofiles
-datasketch
-sentence-transformers
-faiss-cpu numpy
-spacy  # download a english model after installing i.e, python -m spacy download en_core_web_sm
-llama-cpp-python
-openai-whisper
-outetts
+alembic
+psycopg2-binary  # PostgreSQL driver
+python-multipart 
+
+# --- AI MODELS & VECTOR SEARCH (Day 8-17) ---
+# NOTE: torch, torchvision, torchaudio are installed via a specific CUDA command.
+#       They are listed here for documentation purposes.
+torch
+torchvision
+torchaudio
+llama-cpp-python  # LLM Runner (Phi-3)
+sentence-transformers  # Embeddings model
+faiss-cpu  # Vector Database
+
+# --- MULTIMODAL UTILITIES (Day 5, 21, 24, 31) ---
+pymupdf  # PDF Parsing (fitz)
+aiofiles  # Asynchronous file handling
+datasketch  # MinHash Fingerprinting
+openai-whisper  # ASR (Microphone)
+spacy  # NER/Scene Graph Extraction
+accelerate  # Diffusers/LLM optimization
+diffusers  # Image Generation Pipeline
+Pillow  # Image manipulation/saving
+numpy  # Required by many ML libraries
+piper-tts
+
+## Download spaCy Model: This downloads the language data needed for scene extraction (Day 11):
+# python -m spacy download en_core_web_sm

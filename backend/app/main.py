@@ -15,6 +15,7 @@ from app.routes import plan as plan_router
 from app.routes import audio as audio_router
 from app.routes import listen as listen_router
 from app.routes import chat as chat_router
+from app.routes import visuals as visuals_router
 
 # --- CONFIG: PATHS ---
 CURRENT_FILE = os.path.abspath(__file__)
@@ -53,6 +54,7 @@ app.include_router(plan_router.router, prefix="/api/plan", tags=["Planner"])
 app.include_router(audio_router.router, prefix="/api/audio", tags=["Audio"])
 app.include_router(listen_router.router, prefix="/api/listen", tags=["Listen"])
 app.include_router(chat_router.router, prefix="/api/chat", tags=["Chat"])
+app.include_router(visuals_router.router, prefix="/api/visuals", tags=["Visuals"])
 
 # --- HOMEPAGE (THE PLAYER) ---
 @app.get("/")
