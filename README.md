@@ -46,8 +46,11 @@ DATABASE_URL=postgresql://postgres:changeme@localhost/historabook_db
 ## . Run the Server
 Navigate to the backend folder and start the server:
 cd backend
-# Using standard Python
+### Using standard Python
 python -m uvicorn app.main:app --reload --port 8001
 
-# OR if using Anaconda path directly:
+### OR if using Anaconda path directly:
 & C:/ProgramData/anaconda3/python.exe -m uvicorn app.main:app --reload --port 8001
+
+
+catalog_id : 46919a93-ffe0-4aad-b928-0d598b86cfb2

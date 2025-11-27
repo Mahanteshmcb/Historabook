@@ -1,0 +1,12 @@
+fastapi uvicorn python-dotenv pydantic
+psycopg2-binary sqlalchemy alembic
+python-multipart 
+sqlalchemy
+pymupdf aiofiles
+datasketch
+sentence-transformers
+faiss-cpu numpy
+spacy  # download a english model after installing i.e, python -m spacy download en_core_web_sm
+llama-cpp-python
+openai-whisper
+outetts

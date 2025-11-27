@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historabook AI</title>
+    <style>
+        /* [STYLES OMITTED FOR BREVITY, ASSUME PREVIOUS STYLES ARE HERE] */
+        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f2f5; color: #333; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0.08); margin-bottom: 20px; }
+        #narration-text { font-size: 1.3em; line-height: 1.6; padding: 15px; background: #f1f9ff; border-left: 5px solid #3498db; border-radius: 4px; }
+        #mic-btn { width: 70px; height: 70px; border-radius: 50%; background: #e74c3c; color: white; font-size: 30px; border: none; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+        #mic-btn.recording { animation: pulse 1.5s infinite; }
+        .controls { display: flex; gap: 15px; align-items: center; margin-top: 20px; border-top: 2px solid #f1f1f1; padding-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>📚 Historabook AI</h1>
+
+    <div class="card" id="setup-panel">
+        <h3>📖 Library</h3>
+        <div id="status-msg" style="color: #666; margin-bottom: 10px;">Connecting to server...</div>
+        <div id="scene-list" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <div class="card" id="stage" style="display:none;">
+        <div id="visual-box">
+            <div id="visual-icon">🖼️</div>
+            <div id="visual-desc">Visual Description...</div>
+        </div>
+
+        <div id="narration-text">Loading lesson...</div>
+        <audio id="audio-player" style="display:none;"></audio>
+
+        <div class="controls">
+            <button id="mic-btn" onmousedown="startRecording()" onmouseup="stopRecording()" onmouseleave="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
+                🎤
+            </button>
+            <div class="status-bar">
+                <span id="status-text">Hold Mic to speak...</span>
+            </div>
+            <button onclick="playNext()">Next Segment ➡</button>
+        </div>
+    </div>
+
+    <script>
+        // FIX: Dynamic API detection to resolve "Connection Failed" / CORS issues
+        const API_BASE = window.location.origin; // e.g., http://localhost:8001
+        const API = API_BASE + "/api";         // e.g., http://localhost:8001/api
+
+        let currentPlan = null;
+        let currentSegmentIndex = 0;
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let activeCatalogId = null;
+
+        window.onload = async function() {
+            const msg = document.getElementById('status-msg');
+            msg.innerText = "🔍 Finding latest book...";
+
+            try {
+                // 1. Get All Books
+                const catRes = await fetch(`${API}/catalog/`);
+                if(!catRes.ok) throw new Error("Server not responding to Catalog API.");
+                const books = await catRes.json();
+
+                // 2. Find the LAST book that has scenes (the one with correct data)
+                let foundScenes = false;
+                for (let i = books.length - 1; i >= 0; i--) {
+                    const book = books[i];
+                    msg.innerText = `Checking book: "${book.title}"...`;
+
+                    const sceneRes = await fetch(`${API}/plan/list/${book.id}`);
+                    const scenes = await sceneRes.json();
+
+                    if (scenes.length > 0) {
+                        activeCatalogId = book.id;
+                        msg.innerHTML = `✅ Loaded <b>"${book.title}"</b> (${scenes.length} scenes)`;
+
+                        scenes.forEach(s => {
+                            const btn = document.createElement('button');
+                            btn.className = 'scene-btn';
+                            btn.innerHTML = `<b>${s.title}</b>`;
+                            btn.onclick = () => startLesson(s.id);
+                            document.getElementById('scene-list').appendChild(btn);
+                        });
+                        foundScenes = true;
+                        break;
+                    }
+                }
+
+                if (!foundScenes) {
+                    msg.innerHTML = "⚠️ No books found with Scenes. Please upload a PDF and wait for extraction.";
+                }
+
+            } catch (e) {
+                msg.innerHTML = `❌ Connection Failed. Is the server running? (${e.message})`;
+                console.error("Initialization Error:", e);
+            }
+        };
+
+        // --- PLAYBACK LOGIC ---
+        async function startLesson(sceneId) {
+            document.getElementById('setup-panel').style.display = 'none';
+            document.getElementById('stage').style.display = 'block';
+            updateStatus("🤖 AI is writing lesson plan...");
+
+            const res = await fetch(`${API}/plan/${sceneId}`, { method: 'POST' });
+            currentPlan = await res.json();
+            currentSegmentIndex = 0;
+            if(currentPlan.segments && currentPlan.segments.length > 0) {
+                playSegment(currentPlan.segments[0]);
+            }
+        }
+
+        async function playSegment(seg) {
+            // Update Text & Visuals
+            document.getElementById('narration-text').innerText = seg.text;
+            document.getElementById('visual-desc').innerText = seg.visual.background;
+            updateStatus("🔊 Speaking...");
+
+            // Request Audio
+            const res = await fetch(`${API}/audio/speak`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ text: seg.text, lang: "en" })
+            });
+            const data = await res.json();
+
+            // Play Audio
+            const audio = document.getElementById('audio-player');
+            // Data.audio_url is relative (/api/audio/file/...)
+            audio.src = API_BASE + data.audio_url; 
+            audio.play();
+
+            audio.onended = () => updateStatus("✅ Done. Click Next or Hold Mic.");
+        }
+
+        function playNext() {
+            if(!currentPlan) return;
+            currentSegmentIndex++;
+            if(currentSegmentIndex < currentPlan.segments.length) {
+                playSegment(currentPlan.segments[currentSegmentIndex]);
+            } else {
+                updateStatus("End of Scene. Load a new one?");
+            }
+        }
+
+        // --- MICROPHONE LOGIC ---
+        async function startRecording() {
+            if(isRecording) return;
+            // ... (Microphone setup code remains the same) ...
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            isRecording = true;
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.start();
+
+            document.getElementById('mic-btn').classList.add('recording');
+            updateStatus("👂 Listening... (Release to send)");
+        }
+
+        async function stopRecording() {
+            if(!isRecording || !mediaRecorder) return;
+            mediaRecorder.stop();
+            isRecording = false;
+            document.getElementById('mic-btn').classList.remove('recording');
+            updateStatus("⏳ Thinking...");
+
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append("file", blob, "input.wav");
+
+                try {
+                    // A. Transcribe (Ear)
+                    const transRes = await fetch(`${API}/listen/transcribe`, { method: 'POST', body: formData });
+                    const transData = await transRes.json();
+
+                    // B. Chat Response (RAG)
+                    const chatRes = await fetch(`${API}/chat/reply`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            question: transData.text,
+                            catalog_id: activeCatalogId // Use the auto-loaded ID
+                        })
+                    });
+                    const chatData = await chatRes.json();
+
+                    // C. Display and Play Response
+                    document.getElementById('narration-text').innerHTML =
+                        `<span style="color:#888;">You:</span> "${transData.text}"<br><br>` +
+                        `<span style="color:#3498db;">AI:</span> "${chatData.text}"`;
+
+                    const audio = document.getElementById('audio-player');
+                    audio.src = API_BASE + chatData.audio_url;
+                    audio.play();
+
+                    audio.onended = () => updateStatus("✅ Answer complete.");
+
+                } catch (e) {
+                    console.error("Full Loop Error:", e);
+                    updateStatus("❌ Error: See console for details.");
+                }
+            };
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('status-text').innerText = msg;
+        }
+    </script>
+</body>
+</html>

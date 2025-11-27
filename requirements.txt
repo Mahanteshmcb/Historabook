@@ -1,4 +1,0 @@
-fastapi uvicorn python-dotenv pydantic
-psycopg2-binary sqlalchemy alembic
-python-multipart 
-sqlalchemy

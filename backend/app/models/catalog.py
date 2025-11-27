@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Text, Boolean
+from sqlalchemy import Column, String, Integer, Text, Boolean, JSON  # <--- Added JSON
 from app.db.session import Base
 import uuid
 
@@ -14,3 +14,6 @@ class Catalog(Base):
     synopsis = Column(Text, nullable=True)
     page_count = Column(Integer, default=0)
     is_public = Column(Boolean, default=True)
+    
+    # NEW: Stores the MinHash signature
+    fingerprints = Column(JSON, nullable=True)

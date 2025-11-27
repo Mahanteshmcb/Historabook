@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.log
 
 # Virtual Environment (The culprit of the 460 files)
 venv/
@@ -12,6 +14,8 @@ env/
 *.db
 *.sqlite3
 postgres_data/
+backend/vector_store.index
+backend/id_map.pkl
 
 # OS specific
 .DS_Store
@@ -20,3 +24,20 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Generated Audio Files
+static/audio/*
+
+# LLM Weights / FAISS Index (Very Large, Generated Files)
+backend/app/models/llm_weights/*.gguf
+backend/app/models/llm_weights/*.onnx
+backend/app/models/llm_weights/*.dll
+
+# Piper Binaries / Dependencies
+backend/app/models/llm_weights/piper/
+backend/vector_store.index
+backend/id_map.pkl
+
+# --- Generated Media / Uploads ---
+backend/static/audio/*
+backend/static/uploads/*
