@@ -1,71 +1,98 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.utils.vector_store import vector_store
-from app.utils.embeddings import get_embedding
-from app.utils.llm import get_model
-from app.utils.tts_piper import generate_audio
-from app.models.chunk import Chunk
+from typing import List, Optional, Dict
+import requests
 
 router = APIRouter()
 
+# --- IN-MEMORY HISTORY ---
+# Stores the last 5 messages for every user session
+chat_memory: Dict[str, List[dict]] = {}
+
 class ChatRequest(BaseModel):
     question: str
-    catalog_id: str
+    catalog_id: Optional[str] = None
+    session_id: str = "default" # Frontend now sends this!
 
 @router.post("/reply")
-def reply_to_user(req: ChatRequest, db: Session = Depends(get_db)):
+async def reply_to_chat(req: ChatRequest):
     """
-    Full RAG Pipeline:
-    Question -> Vector Search -> DB Context -> LLM Answer -> TTS Audio
+    Smart Chat endpoint with Memory and Suggestions.
     """
-    print(f"🗣️ User asked: {req.question}")
-
-    # 1. SEARCH (Retrieve Context)
-    query_vector = get_embedding(req.question)
-    search_results = vector_store.search(query_vector, k=3)
-    
-    context_text = ""
-    if search_results:
-        found_ids = [res[0] for res in search_results]
-        # Fetch text from Postgres
-        chunks = db.query(Chunk).filter(Chunk.id.in_(found_ids)).all()
+    try:
+        # 1. Retrieve History
+        history = chat_memory.get(req.session_id, [])
         
-        # FIX: Pylance fix (ensure contents are strings)
-        context_text = "\n\n".join([str(c.content) for c in chunks])
+        # Keep context tight (Last 3 turns)
+        short_history = history[-6:] 
         
-        print(f"📚 Found {len(chunks)} relevant facts.")
-    
-    # 2. THINK (Ask LLM)
-    llm = get_model()
-    
-    prompt = f"""<|system|>
-You are a helpful assistant teaching a book. Use the Context below to answer the user. Keep it short (2 sentences max).
-<|end|>
-<|user|>
-Context: {context_text}
+        history_str = ""
+        for msg in short_history:
+            history_str += f"{msg['role']}: {msg['content']}\n"
 
-Question: {req.question}
-<|end|>
-<|assistant|>"""
+        # 2. Build Prompt with Memory
+        prompt = f"""
+        You are Historabook AI, a helpful and encouraging tutor.
+        
+        CONVERSATION HISTORY:
+        {history_str}
+        
+        USER'S NEW QUESTION: "{req.question}"
+        
+        TASK:
+        1. Answer the question clearly (max 2-3 sentences).
+        2. Provide 3 short, curious follow-up questions the user might want to ask next.
+        
+        FORMAT OUTPUT EXACTLY LIKE THIS:
+        [ANSWER]
+        (Write answer here)
+        
+        [SUGGESTIONS]
+        - (Follow up 1)
+        - (Follow up 2)
+        - (Follow up 3)
+        """
 
-    output = llm(
-        prompt, 
-        max_tokens=100,
-        stop=["<|end|>"],
-        echo=False,
-        stream=False
-    )
-    
-    # FIX: Type ignore for Pylance Stream error
-    answer_text = output["choices"][0]["text"].strip() # type: ignore
-    print(f"🤖 AI Answer: {answer_text}")
+        # 3. Call Ollama
+        print(f"🧠 Thinking with {len(short_history)} context items...")
+        resp = requests.post("http://localhost:11434/api/generate", json={
+            "model": "mistral", # Make sure this matches your installed model
+            "prompt": prompt,
+            "stream": False
+        })
+        
+        if resp.status_code != 200:
+            return {"text": "My brain is offline.", "suggestions": []}
 
-    # 3. SPEAK (Generate Audio)
-    audio_filename = generate_audio(answer_text, lang="en")
-    
-    return {
-        "text": answer_text,
-        "audio_url": f"/api/audio/file/{audio_filename}"
-    }
+        full_output = resp.json().get("response", "")
+        
+        # 4. Parse Answer vs Suggestions
+        answer_text = full_output
+        suggestions = []
+        
+        if "[ANSWER]" in full_output:
+            parts = full_output.split("[SUGGESTIONS]")
+            answer_text = parts[0].replace("[ANSWER]", "").strip()
+            
+            if len(parts) > 1:
+                lines = parts[1].strip().split("\n")
+                for line in lines:
+                    clean = line.strip().replace("- ", "").replace("* ", "")
+                    if clean:
+                        suggestions.append(clean)
+
+        # 5. Save to Memory
+        history.append({"role": "User", "content": req.question})
+        history.append({"role": "AI", "content": answer_text})
+        chat_memory[req.session_id] = history
+
+        # 6. Return
+        return {
+            "text": answer_text,
+            "suggestions": suggestions[:3],
+            "audio_url": "" # We can add TTS here later if you want the chatbot to speak too!
+        }
+
+    except Exception as e:
+        print(f"Chat Error: {e}")
+        return {"text": f"Error: {str(e)}", "suggestions": []}

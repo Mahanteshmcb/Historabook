@@ -57,3 +57,9 @@ cd backend
 
 #  Run in Terminal
 uvicorn main:app --reload --port 8001
+
+
+
+# 
+set HF_HUB_OFFLINE=1
+python main.py

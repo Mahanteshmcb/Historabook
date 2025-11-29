@@ -3,347 +3,501 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historabook AI</title>
+    <title>Historabook Cinema</title>
     <style>
-        /* --- STYLES --- */
-        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f2f5; color: #333; padding-bottom: 80px; }
-        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        :root { --primary: #e50914; --bg: #141414; --card: #1f1f1f; --text: #fff; --highlight: #2c3e50; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); padding-bottom: 120px; overflow-y: scroll; }
         
-        /* Header */
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { margin: 0; font-size: 2em; display: flex; align-items: center; gap: 10px; }
-        .btn-reset { background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background: rgba(0,0,0,0.9); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid #333; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .nav-controls { display: flex; gap: 15px; }
+        input[type="file"] { display: none; }
+        
+        .view-section { display: none; padding: 20px 40px; }
+        .view-section.active { display: block; }
 
-        /* Upload Section */
-        .upload-section { border: 2px dashed #cbd5e0; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; background: #f8f9fa; cursor: pointer; transition: all 0.2s; }
-        .upload-section:hover { border-color: #3498db; background: #e3f2fd; }
+        .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .book-card { 
+            background: var(--card); border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 2/3; 
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #333;
+        }
+        .book-card:hover { transform: scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,0.5); border-color: var(--primary); }
+        .book-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(to top, black, transparent); }
+        .book-title { font-weight: bold; font-size: 1rem; margin-bottom: 5px; }
+        .book-id { font-size: 0.75rem; color: #aaa; }
 
-        /* Stage (Visuals) */
+        .cinema-container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; height: 75vh; }
+        .sidebar { background: var(--card); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid #333; font-weight: bold; background: #252525; }
+        .playlist { flex: 1; overflow-y: auto; }
+        .scene-item { padding: 12px 15px; border-bottom: 1px solid #333; cursor: pointer; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
+        .scene-item:hover { background: #333; }
+        .scene-item.active { background: var(--highlight); border-left: 4px solid var(--primary); color: white; }
+        .status-icon { font-size: 0.8rem; }
+        
+        .stage-area { display: flex; flex-direction: column; gap: 15px; }
         #visual-box { 
-            width: 100%; height: 350px; background: #2d3436; color: #dfe6e9; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; border-radius: 12px; position: relative; overflow: hidden;
-            background-size: contain; background-repeat: no-repeat; background-position: center; text-align: center;
+            flex: 1; background: black; border-radius: 8px; position: relative; overflow: hidden;
+            background-size: cover; background-position: center; transition: background-image 1s ease-in-out;
+            display: flex; align-items: center; justify-content: center;
         }
-        #visual-desc { display: none; } 
-        
-        /* Text Chat Bar */
-        .chat-bar-container {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: white; border-top: 1px solid #ddd;
-            padding: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            display: flex; justify-content: center; z-index: 100;
+        #subtitle-overlay {
+            position: absolute; bottom: 30px; left: 10%; right: 10%; text-align: center;
+            font-size: 1.2rem; text-shadow: 0 2px 4px black; background: rgba(0,0,0,0.6); 
+            padding: 10px 20px; border-radius: 8px; pointer-events: none;
         }
-        .chat-input-wrapper { width: 100%; max-width: 800px; display: flex; gap: 10px; position: relative; }
-        #user-input { width: 100%; padding: 12px 15px; border-radius: 24px; border: 1px solid #ccc; font-size: 16px; outline: none; }
-        #user-input:focus { border-color: #3498db; }
-        .btn-send { background: #3498db; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; font-size: 18px; }
+        #loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 10; flex-direction: column; gap: 10px; }
         
-        #mic-btn-floating { width: 45px; height: 45px; border-radius: 50%; background: #e74c3c; color: white; border: none; font-size: 20px; cursor: pointer; }
-        #mic-btn-floating.recording { animation: pulse 1.5s infinite; }
+        .btn { border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-sec { background: #444; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #666; color: #ccc; }
+        .btn:hover { opacity: 0.9; }
 
-        #narration-text { font-size: 1.2em; line-height: 1.6; padding: 15px; background: #f1f9ff; border-left: 5px solid #3498db; border-radius: 4px; margin-top: 20px;}
-        .scene-btn { width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; background: #fff; border: 1px solid #eee; border-radius: 6px; cursor: pointer; }
-        .scene-btn:hover { background-color: #f0f7fa; border-color: #3498db; }
-        #visual-loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); color: white; display: none; align-items: center; justify-content: center; }
+        .player-footer { 
+            position: fixed; bottom: 0; left: 0; right: 0; height: 80px; 
+            background: #1a1a1a; border-top: 1px solid #333; 
+            display: flex; align-items: center; justify-content: center; gap: 20px; padding: 0 40px; z-index: 100;
+        }
+        .controls { display: flex; gap: 10px; align-items: center; }
+        .chat-wrapper { flex: 1; max-width: 800px; display: flex; gap: 10px; position: relative; }
+        .chat-input { width: 100%; background: #333; border: 1px solid #444; padding: 12px 20px; border-radius: 30px; color: white; outline: none; }
+        
+        /* MODE SELECTION MODAL */
+        #mode-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200;
+            display: none; align-items: center; justify-content: center;
+        }
+        .mode-card { background: #222; padding: 30px; border-radius: 12px; text-align: center; max-width: 600px; width: 90%; border: 1px solid #444; }
+        .mode-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .mode-btn { 
+            padding: 20px 10px; background: #333; border: 1px solid #444; color: #fff; 
+            cursor: pointer; border-radius: 8px; transition: 0.2s; 
+            display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%;
+        }
+        .mode-btn:hover { background: var(--primary); border-color: var(--primary); transform: translateY(-3px); }
+        .mode-title { font-weight: bold; font-size: 1.2em; display: block; }
+        .mode-desc { font-size: 0.8em; color: #aaa; display: block; line-height: 1.4; }
+
+        .spinner { width: 24px; height: 24px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #mic-btn { width: 44px; height: 44px; border-radius: 50%; background: #e74c3c; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        #mic-btn.recording { animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>📚 Historabook AI</h1>
-        <button class="btn-reset" onclick="resetApp()">↻ Library</button>
-    </header>
-
-    <div class="card" id="setup-panel">
-        <div class="upload-section" onclick="document.getElementById('pdf-upload').click()">
-            <p style="margin:0; font-weight: 500;">📂 Upload PDF Lesson</p>
-            <p style="margin:5px 0 0 0; font-size: 0.8em; color: #888;">Click to browse files</p>
-            <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;" onchange="handleFileSelect()">
+    <nav>
+        <div class="logo" onclick="switchView('library')">
+            <span>🎥</span> Historabook Cinema
         </div>
-        <div id="status-msg" style="color: #666; margin-bottom: 10px;">Connecting...</div>
-        <div id="scene-list" style="max-height: 400px; overflow-y: auto;"></div>
-    </div>
-
-    <div class="card" id="stage" style="display:none;">
-        <div id="visual-box">
-            <div id="visual-loading-overlay"><span id="loading-message">⏳ Generating Visuals...</span></div>
-            <div id="visual-desc"></div>
+        <div class="nav-controls">
+            <button class="btn btn-outline" onclick="document.getElementById('pdf-upload').click()">+ Upload Book</button>
+            <input type="file" id="pdf-upload" accept="application/pdf" onchange="showModeSelector()">
         </div>
+    </nav>
 
-        <div id="narration-text">Loading lesson...</div>
-        <audio id="audio-player" style="display:none;"></audio>
-
-        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-            <button onclick="playPrevious()" style="background:#95a5a6; color:white; border:none; padding: 8px 15px; border-radius: 6px;">⬅ Back</button>
-            <button onclick="requestReexplain()" style="background:#f1c40f; color:#333; border:none; padding: 8px 15px; border-radius: 6px;">Re-Explain</button>
-            <button onclick="playNext()" style="background:#3498db; color:white; border:none; padding: 8px 25px; border-radius: 6px; font-weight: bold;">Next ➡</button>
-        </div>
-    </div>
-
-    <div class="chat-bar-container">
-        <div class="chat-input-wrapper">
-            <button id="mic-btn-floating" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">🎤</button>
-            <input type="text" id="user-input" placeholder="Ask a question or search..." onkeypress="handleKeyPress(event)">
-            <button class="btn-send" onclick="sendTextMessage()">➤</button>
-        </div>
-        <div style="position: absolute; top: -30px; background: #333; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; display:none;" id="floating-status">
-            Ready
+    <div id="mode-modal">
+        <div class="mode-card">
+            <h2>Select Experience</h2>
+            <p style="color:#ccc; margin-bottom: 20px;">How deeply do you want to explore this book?</p>
+            <div class="mode-options">
+                <div class="mode-btn" onclick="startUpload('trailer')">
+                    <span class="mode-title">🎬 Trailer</span>
+                    <span class="mode-desc">Quick Summary<br>(3-5 Scenes)</span>
+                </div>
+                <div class="mode-btn" onclick="startUpload('movie')">
+                    <span class="mode-title">🍿 Movie</span>
+                    <span class="mode-desc">Standard Cut<br>(~15 Scenes)</span>
+                </div>
+                <div class="mode-btn" onclick="startUpload('series')">
+                    <span class="mode-title">📺 Series</span>
+                    <span class="mode-desc">Full Detail<br>(50+ Scenes)</span>
+                </div>
+            </div>
+            <button class="btn btn-outline" style="margin-top:20px; width:100%; justify-content: center;" onclick="document.getElementById('mode-modal').style.display='none'">Cancel</button>
         </div>
     </div>
+
+    <div id="library-view" class="view-section active">
+        <div class="library-header">
+            <h2>My Library</h2>
+            <div id="lib-status" style="color: #888; font-size: 0.9em;">Ready</div>
+        </div>
+        <div id="library-grid" class="library-grid"></div>
+    </div>
+
+    <div id="cinema-view" class="view-section">
+        <div style="margin-bottom:10px;">
+            <button class="btn btn-outline" style="padding: 5px 10px; font-size:0.8em;" onclick="switchView('library')">← Back to Library</button>
+        </div>
+        
+        <div class="cinema-container">
+            <div class="sidebar">
+                <div class="sidebar-header">Scenes</div>
+                <div class="playlist" id="scene-list"></div>
+                <div style="padding:10px; font-size:0.8em; color:#666; text-align:center;" id="queue-status">Queue: Idle</div>
+            </div>
+
+            <div class="stage-area">
+                <div id="visual-box">
+                    <div id="loading-overlay">
+                        <div class="spinner"></div>
+                        <span id="loading-text">Loading...</span>
+                    </div>
+                    <div id="subtitle-overlay"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="player-footer">
+        <div class="controls">
+            <button class="btn btn-sec" onclick="playPrevious()">⏮</button>
+            <button class="btn btn-primary" id="btn-play" onclick="resumeMovie()">▶ Play</button>
+            <button class="btn btn-sec" id="btn-pause" onclick="pauseMovie()" style="display:none;">⏸ Pause</button>
+            <button class="btn btn-sec" onclick="playNext(true)">⏭</button>
+        </div>
+        <div class="chat-wrapper">
+            <button id="mic-btn" onmousedown="startRecording()" onmouseup="stopRecording()">🎤</button>
+            <input type="text" class="chat-input" id="chat-input" placeholder="Ask AI about this scene..." onkeypress="handleChat(event)">
+        </div>
+    </div>
+
+    <audio id="audio-player" style="display:none;"></audio>
 
     <script>
         const API = window.location.origin + "/api";
-        let currentPlan = null;
-        let currentSegmentIndex = 0;
-        let mediaRecorder, audioChunks = [], isRecording = false;
-        let activeCatalogId = null, animationInterval = null;
-        let allSceneIds = [], currentSceneIndexInList = -1;
+        const SESSION_ID = "sess_" + Date.now();
 
-        // --- 1. UPLOAD & INIT ---
-        window.onload = () => {
-            const audio = document.getElementById('audio-player');
-            // Auto-play next when audio ends (pass true for auto)
-            audio.onended = () => { if (currentPlan) playNext(true); };
-            loadScenes();
-        };
+        let allScenes = [];
+        let sceneCache = {}; 
+        let currentSceneIndex = 0;
+        let isPlaying = false;
+        let activeBookId = null;
+        let animationInterval = null;
+        let generationQueue = [];
+        let isWorkerRunning = false;
+        let stopWorker = false;
 
-        async function handleFileSelect() {
-            const file = document.getElementById('pdf-upload').files[0];
-            if (!file) return;
-            updateStatus("⏳ Uploading...");
-            const formData = new FormData();
-            formData.append('file', file);
-            try {
-                const res = await fetch(`${API}/catalog/upload`, { method: 'POST', body: formData });
-                if (!res.ok) throw new Error("Upload Failed");
-                updateStatus("✅ Uploaded! refreshing list...");
-                setTimeout(loadScenes, 1000); 
-            } catch (e) {
-                alert("Upload Error: " + e.message);
-                updateStatus("❌ Error");
-            }
-        }
+        window.onload = loadLibrary;
 
-        async function loadScenes() {
+        async function loadLibrary() {
             try {
                 const res = await fetch(`${API}/catalog/`);
-                if (!res.ok) throw new Error("API Error");
                 const books = await res.json();
-                
-                const list = document.getElementById('scene-list');
-                list.innerHTML = "";
-                if (books.length === 0) {
-                    document.getElementById('status-msg').innerText = "Library empty. Upload a PDF!";
-                    return;
-                }
-                document.getElementById('status-msg').innerText = `Library (${books.length} books found)`;
-
-                books.forEach(book => {
-                    const div = document.createElement('div');
-                    div.className = 'scene-btn';
-                    div.innerHTML = `<b>📖 ${book.title}</b> <span style="font-size:0.8em; color:#888;">(ID: ${book.id})</span>`;
-                    div.onclick = () => loadBookScenes(book.id);
-                    list.appendChild(div);
-                });
-            } catch (e) { console.error(e); }
+                renderLibrary(books);
+            } catch (e) { console.error("Library Error", e); }
         }
 
-        async function loadBookScenes(bookId) {
-            activeCatalogId = bookId;
-            updateStatus("Loading Book...");
+        function renderLibrary(books) {
+            const grid = document.getElementById('library-grid');
+            grid.innerHTML = "";
+            if (books.length === 0) {
+                grid.innerHTML = "<div style='color:#666; padding:20px;'>Library is empty. Upload a PDF!</div>";
+                return;
+            }
+            books.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                const hue = (book.title.length * 20) % 360; 
+                card.style.background = `linear-gradient(to top, #111 20%, hsl(${hue}, 40%, 20%))`;
+                card.innerHTML = `
+                    <div class="book-info">
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-id">${book.id}</div>
+                    </div>
+                `;
+                card.onclick = () => openBook(book.id);
+                grid.appendChild(card);
+            });
+        }
+
+        // --- UPLOAD FLOW ---
+        function showModeSelector() {
+            document.getElementById('mode-modal').style.display = 'flex';
+        }
+
+        async function startUpload(mode) {
+            document.getElementById('mode-modal').style.display = 'none';
+            const file = document.getElementById('pdf-upload').files[0];
+            if (!file) return;
+
+            document.getElementById('lib-status').innerText = `⏳ Uploading (${mode})...`;
+            const fd = new FormData(); 
+            fd.append('file', file);
+            fd.append('mode', mode);
+
             try {
-                const res = await fetch(`${API}/plan/list/${bookId}`);
-                const scenes = await res.json();
-                if(scenes.length === 0) {
-                    alert("No scenes yet. Extraction might be in progress.");
-                    return;
-                }
-                // Store all IDs so we can auto-advance later
-                allSceneIds = scenes.map(s => s.id);
-                // Start First Scene
-                startLesson(allSceneIds[0], 0);
-            } catch(e) { alert("Error loading scenes: " + e.message); }
-        }
-
-        // --- 2. TEXT & SEARCH ---
-        function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
-
-        async function sendTextMessage() {
-            const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            if (!text) return;
-            input.value = ""; 
-
-            if (currentPlan && document.getElementById('stage').style.display !== 'none') {
-                processUserQuery(text);
-            } else {
-                const list = document.getElementById('scene-list');
-                const items = list.getElementsByClassName('scene-btn');
-                let found = 0;
-                for (let item of items) {
-                    if (item.innerText.toLowerCase().includes(text.toLowerCase())) {
-                        item.style.display = "block"; found++;
-                    } else { item.style.display = "none"; }
-                }
-                updateStatus(found > 0 ? `Found ${found} books` : "No books found");
+                const res = await fetch(`${API}/catalog/upload`, { method: 'POST', body: fd });
+                if (!res.ok) throw new Error("Server Error");
+                const data = await res.json();
+                
+                // Clear old cache for this book since we just re-uploaded it
+                localStorage.removeItem(`historabook_cache_${data.id}`);
+                
+                await loadLibrary();
+                openBook(data.id); 
+            } catch (e) {
+                alert("Upload failed: " + e.message);
+                document.getElementById('lib-status').innerText = "Error";
             }
         }
 
-        // --- 3. LESSON LOGIC (FIXED) ---
-        async function startLesson(sceneId, index) {
-            currentSceneIndexInList = index;
-            document.getElementById('setup-panel').style.display = 'none';
-            document.getElementById('stage').style.display = 'block';
-            
-            updateStatus(`🎬 Playing Scene ${index + 1}...`);
-            const res = await fetch(`${API}/plan/${sceneId}`, { method: 'POST' });
-            currentPlan = await res.json();
-            currentSegmentIndex = 0;
-            if(currentPlan.segments.length > 0) playSegment(currentPlan.segments[0]);
+        function switchView(name) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`${name}-view`).classList.add('active');
+            if(name === 'library') {
+                pauseMovie();
+                stopWorker = true; 
+            }
         }
 
-        async function playSegment(seg) {
-            document.getElementById('audio-player').pause();
-            if(animationInterval) clearInterval(animationInterval);
+        async function openBook(bookId) {
+            activeBookId = bookId;
+            switchView('cinema');
+            document.getElementById('loading-overlay').style.display = 'flex';
+            document.getElementById('loading-text').innerText = "Loading Scenes...";
+
+            const res = await fetch(`${API}/plan/list/${bookId}`);
+            allScenes = await res.json();
+
+            if (allScenes.length === 0) {
+                alert("Processing... wait 5s and try again.");
+                switchView('library');
+                return;
+            }
+
+            currentSceneIndex = 0;
+            sceneCache = {};
             
-            document.getElementById('narration-text').innerText = seg.text;
-            document.getElementById('visual-loading-overlay').style.display = 'flex';
-            document.getElementById('visual-desc').style.display = 'none';
+            // --- PERSISTENCE LOAD ---
+            const savedCache = localStorage.getItem(`historabook_cache_${bookId}`);
+            if (savedCache) {
+                try { 
+                    sceneCache = JSON.parse(savedCache);
+                    console.log("📂 Loaded existing scenes from storage");
+                } catch(e) { console.log("Cache invalid"); }
+            }
+            // ------------------------
+
+            renderPlaylist();
+            stopWorker = false;
+            startBackgroundGeneration(); 
             
-            const [audioRes, visRes] = await Promise.all([
-                fetch(`${API}/audio/speak`, { 
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ text: seg.text, lang: "en" })
-                }),
-                fetch(`${API}/visuals/generate`, { 
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ prompt: seg.visual.background })
-                })
-            ]);
+            setTimeout(() => {
+                if(sceneCache[allScenes[0].id]) {
+                    playScene(0);
+                } else {
+                    document.getElementById('loading-text').innerText = "Creating Scene 1...";
+                }
+            }, 1000);
+        }
 
-            const audioData = await audioRes.json();
-            const visData = await visRes.json();
+        // --- BACKGROUND WORKER (PERSISTENT) ---
+        async function startBackgroundGeneration() {
+            if (isWorkerRunning) return;
+            isWorkerRunning = true;
+            console.log("🏭 Background Worker Started...");
 
-            const audio = document.getElementById('audio-player');
-            audio.src = API + "/.." + audioData.audio_url; 
-            audio.play();
+            while (!stopWorker) {
+                let nextIndex = -1;
+                // Find next gap
+                for (let i = 0; i < allScenes.length; i++) {
+                    if (!sceneCache[allScenes[i].id]) {
+                        nextIndex = i;
+                        break;
+                    }
+                }
 
-            document.getElementById('visual-loading-overlay').style.display = 'none';
+                if (nextIndex === -1) {
+                    document.getElementById('queue-status').innerText = "All Scenes Ready";
+                    break;
+                }
+
+                const scene = allScenes[nextIndex];
+                updateStatusIcon(nextIndex, "⚙️"); 
+                document.getElementById('queue-status').innerText = `Generating Scene ${nextIndex + 1}...`;
+
+                try {
+                    const planRes = await fetch(`${API}/plan/${scene.id}`, { method: 'POST' });
+                    const plan = await planRes.json();
+                    const seg = plan.segments[0];
+
+                    // Robust Fetch (Handle Audio Failures)
+                    let audioUrl = "";
+                    try {
+                        const audRes = await fetch(`${API}/audio/speak`, { 
+                            method: 'POST', headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({ text: seg.text, lang: "en" })
+                        });
+                        if(audRes.ok) {
+                            const audData = await audRes.json();
+                            audioUrl = API + "/.." + audData.audio_url;
+                        }
+                    } catch(e) { console.warn("Audio gen failed, continuing silent"); }
+
+                    const visRes = await fetch(`${API}/visuals/generate`, { 
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ prompt: seg.visual.background })
+                    });
+                    const visData = await visRes.json();
+
+                    // Update Cache
+                    sceneCache[scene.id] = {
+                        text: seg.text,
+                        audio: audioUrl,
+                        images: visData.image_urls.map(u => API + "/.." + u)
+                    };
+
+                    // --- SAVE PERSISTENCE ---
+                    localStorage.setItem(`historabook_cache_${activeBookId}`, JSON.stringify(sceneCache));
+                    // ------------------------
+
+                    updateStatusIcon(nextIndex, "✅");
+                    
+                    if (isPlaying && currentSceneIndex === nextIndex) {
+                        playScene(nextIndex);
+                    }
+
+                } catch (e) {
+                    console.error("Worker Error", e);
+                    updateStatusIcon(nextIndex, "❌");
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+            isWorkerRunning = false;
+        }
+
+        // --- PLAYER ---
+        function playScene(index) {
+            if (index >= allScenes.length) { isPlaying = false; toggleBtn(false); return; }
+            
+            currentSceneIndex = index;
+            renderPlaylist();
+            const id = allScenes[index].id;
+
+            if (!sceneCache[id]) {
+                document.getElementById('loading-overlay').style.display = 'flex';
+                document.getElementById('loading-text').innerText = `Waiting for Scene ${index + 1}...`;
+                return; // Worker will auto-play when done
+            }
+
+            document.getElementById('loading-overlay').style.display = 'none';
+            const data = sceneCache[id];
+
+            document.getElementById('subtitle-overlay').innerText = data.text;
             const vBox = document.getElementById('visual-box');
-            if(visData.image_urls?.length > 0) {
-                let i = 0;
-                vBox.style.backgroundImage = `url(${API}/..${visData.image_urls[0]})`;
+            
+            if (data.images.length > 0) {
+                let f = 0;
+                vBox.style.backgroundImage = `url(${data.images[0]})`;
+                if (animationInterval) clearInterval(animationInterval);
                 animationInterval = setInterval(() => {
-                    i = (i + 1) % visData.image_urls.length;
-                    vBox.style.backgroundImage = `url(${API}/..${visData.image_urls[i]})`;
-                }, 1500);
+                    f = (f + 1) % data.images.length;
+                    vBox.style.backgroundImage = `url(${data.images[f]})`;
+                }, 2000);
             }
+
+            const aud = document.getElementById('audio-player');
+            if (data.audio) {
+                aud.src = data.audio;
+                aud.play();
+                aud.onended = () => { if (isPlaying) playNext(false); };
+            } else {
+                setTimeout(() => { if (isPlaying) playNext(false); }, 5000);
+            }
+        }
+
+        function playNext(manual) { 
+            if(manual) isPlaying = true;
+            toggleBtn(true);
+            playScene(currentSceneIndex + 1); 
+        }
+        function playPrevious() { if (currentSceneIndex > 0) playScene(currentSceneIndex - 1); }
+        function resumeMovie() {
+            isPlaying = !isPlaying;
+            const aud = document.getElementById('audio-player');
+            toggleBtn(isPlaying);
+            if(isPlaying) {
+                if(aud.paused && aud.src) aud.play();
+                else playScene(currentSceneIndex);
+            } else {
+                aud.pause();
+            }
+        }
+        function pauseMovie() {
+            isPlaying = false;
+            toggleBtn(false);
+            document.getElementById('audio-player').pause();
+        }
+
+        function toggleBtn(playing) {
+            document.getElementById('btn-play').style.display = playing ? 'none' : 'flex';
+            document.getElementById('btn-pause').style.display = playing ? 'flex' : 'none';
+        }
+
+        function renderPlaylist() {
+            const list = document.getElementById('scene-list');
+            list.innerHTML = "";
+            allScenes.forEach((s, i) => {
+                const div = document.createElement('div');
+                div.className = `scene-item ${i === currentSceneIndex ? 'active' : ''}`;
+                let icon = sceneCache[s.id] ? "✅" : "○";
+                div.innerHTML = `<span>${i+1}. ${s.title}</span> <span id="status-${i}" class="status-icon">${icon}</span>`;
+                div.onclick = () => { isPlaying=true; toggleBtn(true); playScene(i); };
+                list.appendChild(div);
+            });
+        }
+
+        function updateStatusIcon(index, icon) {
+            const el = document.getElementById(`status-${index}`);
+            if (el) el.innerText = icon;
         }
         
-        // --- KEY FIX HERE ---
-        function playNext(auto) {
-            if (!auto) { // Manual click pauses
-                document.getElementById('audio-player').pause();
-                if(animationInterval) clearInterval(animationInterval);
-            }
-            
-            currentSegmentIndex++;
-            
-            // 1. More segments in CURRENT scene?
-            if (currentPlan && currentSegmentIndex < currentPlan.segments.length) {
-                playSegment(currentPlan.segments[currentSegmentIndex]);
-            } else {
-                // 2. More SCENES in the book?
-                if (allSceneIds.length > 0 && currentSceneIndexInList < allSceneIds.length - 1) {
-                    updateStatus("✅ Scene Complete. Loading next chapter...");
-                    // Auto-load next scene
-                    startLesson(allSceneIds[currentSceneIndexInList + 1], currentSceneIndexInList + 1);
-                } else {
-                    updateStatus("📚 End of Book.");
-                }
-            }
+        function switchView(name) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`${name}-view`).classList.add('active');
+            if(name === 'library') { stopWorker = true; pauseMovie(); }
+        }
+        
+        function handleChat(e) { if(e.key === 'Enter') sendChat(); }
+        async function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+            pauseMovie();
+            input.value = "Thinking...";
+            const res = await fetch(`${API}/chat/reply`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ question: text, catalog_id: activeBookId, session_id: SESSION_ID })
+            });
+            const data = await res.json();
+            input.value = "";
+            alert("AI Tutor: " + data.text);
         }
 
-        function playPrevious() {
-            if (!currentPlan) return;
-            document.getElementById('audio-player').pause();
-            if (animationInterval) clearInterval(animationInterval);
-            if (currentSegmentIndex > 0) {
-                currentSegmentIndex--;
-                playSegment(currentPlan.segments[currentSegmentIndex]);
-            } else if (currentSceneIndexInList > 0) {
-                // Go to previous scene
-                startLesson(allSceneIds[currentSceneIndexInList - 1], currentSceneIndexInList - 1); 
-            }
-        }
-
-        // --- 4. ASSISTANT ---
-        async function processUserQuery(text) {
-            document.getElementById('audio-player').pause(); 
-            updateStatus("🧠 AI Thinking...");
-            document.getElementById('narration-text').innerHTML = `<span style="color:#888;">You:</span> ${text}`;
-            try {
-                const res = await fetch(`${API}/chat/reply`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ question: text, catalog_id: activeCatalogId })
-                });
-                const data = await res.json();
-                document.getElementById('narration-text').innerHTML += `<br><br><span style="color:#3498db;">AI:</span> ${data.text}`;
-                updateStatus("🗣️ Speaking...");
-                const audio = document.getElementById('audio-player');
-                audio.src = API + "/.." + data.audio_url;
-                audio.play();
-                audio.onended = () => {
-                    updateStatus("Resuming...");
-                    playSegment(currentPlan.segments[currentSegmentIndex]); 
-                };
-            } catch (e) { console.error(e); updateStatus("❌ Error"); }
-        }
-
-        function updateStatus(msg) {
-            const el = document.getElementById('floating-status');
-            el.innerText = msg; el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 3000);
-        }
-
-        function requestReexplain() {
-            updateStatus("⏳ Re-explaining...");
-            playSegment(currentPlan.segments[currentSegmentIndex]);
-        }
-
-        function resetApp() {
-            document.getElementById('stage').style.display = 'none';
-            document.getElementById('setup-panel').style.display = 'block';
-            document.getElementById('audio-player').pause();
-            loadScenes();
-        }
-
+        let mediaRecorder, audioChunks = [];
         async function startRecording() {
-            if (isRecording) return;
-            document.getElementById('audio-player').pause();
+            pauseMovie();
             const stream = await navigator.mediaDevices.getUserMedia({audio:true});
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.start();
-            isRecording = true;
-            document.getElementById('mic-btn-floating').classList.add('recording');
-            updateStatus("Listening...");
+            document.getElementById('mic-btn').classList.add('recording');
         }
-
         async function stopRecording() {
-            if (!isRecording) return;
             mediaRecorder.stop();
-            isRecording = false;
-            document.getElementById('mic-btn-floating').classList.remove('recording');
+            document.getElementById('mic-btn').classList.remove('recording');
             mediaRecorder.onstop = async () => {
                 const blob = new Blob(audioChunks, {type:'audio/wav'});
                 const fd = new FormData(); fd.append("file", blob, "input.wav");
-                updateStatus("Transcribing...");
                 const res = await fetch(`${API}/listen/transcribe`, {method:'POST', body:fd});
                 const data = await res.json();
-                processUserQuery(data.text);
+                document.getElementById('chat-input').value = data.text;
+                sendChat();
             };
         }
     </script>

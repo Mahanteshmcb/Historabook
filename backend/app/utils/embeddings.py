@@ -1,8 +1,16 @@
 from sentence_transformers import SentenceTransformer
+import os
 
 # Load model once (singleton pattern)
 # This downloads about 80MB the first time you run it.
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# POINT TO THE LOCAL FOLDER
+model_path = "./local_models/all-MiniLM-L6-v2"
+
+# Check if it exists to be safe
+if not os.path.exists(model_path):
+    raise RuntimeError(f"Offline model not found at {model_path}. Please run download_model.py")
+
+model = SentenceTransformer(model_path)
 
 def get_embedding(text: str) -> list:
     """

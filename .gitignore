@@ -42,3 +42,5 @@ backend/id_map.pkl
 backend/static/audio/*
 backend/static/uploads/*
 backend/static/images/*
+backend/local_models/*
+backend/storage/*

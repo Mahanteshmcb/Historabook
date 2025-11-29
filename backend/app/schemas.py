@@ -19,12 +19,11 @@ class Catalog(CatalogBase):
     class Config:
         from_attributes = True
 
-# --- 2. Resolve Schemas (RESTORED) ---
+# --- 2. Search & Resolve ---
 class ResolveResult(BaseModel):
     results: List[Catalog]
     match_confidence: float
 
-# --- 3. Search Schemas ---
 class SearchResult(BaseModel):
     chunk_id: str
     content: str
@@ -34,7 +33,7 @@ class SearchResult(BaseModel):
 class SearchResponse(BaseModel):
     results: List[SearchResult]
 
-# --- 4. Scene Schemas ---
+# --- 3. Scene Schemas ---
 class Scene(BaseModel):
     id: str
     catalog_id: str
@@ -46,20 +45,18 @@ class Scene(BaseModel):
     class Config:
         from_attributes = True
 
-# --- 5. Planner Schemas ---
-class VisualSpec(BaseModel):
-    character_focus: Optional[str] = None
-    background: str = "default_classroom"
-    camera_action: str = "static"
-    style: str = "realistic"
+# --- 4. Planner Schemas (FIXED for Day 35) ---
+# Renamed to match app/utils/planner.py expectations
 
-class NarrationSegment(BaseModel):
-    index: int
+class VisualPrompt(BaseModel):
+    background: str
+    camera_action: str = "static"
+
+class Segment(BaseModel):
     text: str
-    visual: VisualSpec
-    analogy: Optional[str] = None
-    checkpoint_question: Optional[str] = None
-    
+    visual: VisualPrompt
+    checkpoint_question: Optional[str] = ""
+
 class LessonPlan(BaseModel):
+    segments: List[Segment]
     scene_id: str
-    segments: List[NarrationSegment]
