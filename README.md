@@ -47,3 +47,13 @@ conda create -n historabook_env python=3.10 -y
 
 # 2. Activate it
 conda activate historabook_env
+
+# 3. connect docker and run 
+docker login
+docker compose up -d
+
+# 4. Move to backend directory
+cd backend
+
+#  Run in Terminal
+uvicorn main:app --reload --port 8001
