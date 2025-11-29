@@ -6,402 +6,345 @@
     <title>Historabook AI</title>
     <style>
         /* --- STYLES --- */
-        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f2f5; color: #333; }
+        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f2f5; color: #333; padding-bottom: 80px; }
         .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        #narration-text { font-size: 1.3em; line-height: 1.6; padding: 15px; background: #f1f9ff; border-left: 5px solid #3498db; border-radius: 4px; }
+        
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { margin: 0; font-size: 2em; display: flex; align-items: center; gap: 10px; }
+        .btn-reset { background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+
+        /* Upload Section */
+        .upload-section { border: 2px dashed #cbd5e0; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; background: #f8f9fa; cursor: pointer; transition: all 0.2s; }
+        .upload-section:hover { border-color: #3498db; background: #e3f2fd; }
+
+        /* Stage (Visuals) */
         #visual-box { 
             width: 100%; height: 350px; background: #2d3436; color: #dfe6e9; display: flex; flex-direction: column; 
             align-items: center; justify-content: center; border-radius: 12px; position: relative; overflow: hidden;
-            background-size: contain; 
-            background-repeat: no-repeat;
-            background-position: center;
+            background-size: contain; background-repeat: no-repeat; background-position: center; text-align: center;
         }
-        button { cursor: pointer; font-size: 14px; padding: 8px 15px; border-radius: 6px; border: 1px solid #ccc; background: #fff; margin: 5px 2px; }
-        .controls { display: flex; gap: 15px; align-items: center; margin-top: 20px; border-top: 2px solid #f1f1f1; padding-top: 20px; }
-        #mic-btn { width: 70px; height: 70px; border-radius: 50%; background: #e74c3c; color: white; font-size: 30px; border: none; }
-        #mic-btn.recording { animation: pulse 1.5s infinite; }
-        .scene-btn { width: 100%; }
+        #visual-desc { display: none; } 
+        
+        /* Text Chat Bar */
+        .chat-bar-container {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: white; border-top: 1px solid #ddd;
+            padding: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            display: flex; justify-content: center; z-index: 100;
+        }
+        .chat-input-wrapper { width: 100%; max-width: 800px; display: flex; gap: 10px; position: relative; }
+        #user-input { width: 100%; padding: 12px 15px; border-radius: 24px; border: 1px solid #ccc; font-size: 16px; outline: none; }
+        #user-input:focus { border-color: #3498db; }
+        .btn-send { background: #3498db; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; font-size: 18px; }
+        
+        #mic-btn-floating { width: 45px; height: 45px; border-radius: 50%; background: #e74c3c; color: white; border: none; font-size: 20px; cursor: pointer; }
+        #mic-btn-floating.recording { animation: pulse 1.5s infinite; }
 
-        /* Loading Overlay Style */
-        #visual-loading-overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7); color: white;
-            display: none; align-items: center; justify-content: center;
-            font-size: 1.5em; text-align: center;
-            z-index: 10;
-        }
+        #narration-text { font-size: 1.2em; line-height: 1.6; padding: 15px; background: #f1f9ff; border-left: 5px solid #3498db; border-radius: 4px; margin-top: 20px;}
+        .scene-btn { width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; background: #fff; border: 1px solid #eee; border-radius: 6px; cursor: pointer; }
+        .scene-btn:hover { background-color: #f0f7fa; border-color: #3498db; }
+        #visual-loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); color: white; display: none; align-items: center; justify-content: center; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-    <h1>📚 Historabook AI</h1>
+    <header>
+        <h1>📚 Historabook AI</h1>
+        <button class="btn-reset" onclick="resetApp()">↻ Library</button>
+    </header>
 
     <div class="card" id="setup-panel">
-        <h3>📖 Library</h3>
-        <div id="status-msg" style="color: #666; margin-bottom: 10px;">Connecting to server...</div>
-        <div id="scene-list" style="max-height: 300px; overflow-y: auto;"></div>
+        <div class="upload-section" onclick="document.getElementById('pdf-upload').click()">
+            <p style="margin:0; font-weight: 500;">📂 Upload PDF Lesson</p>
+            <p style="margin:5px 0 0 0; font-size: 0.8em; color: #888;">Click to browse files</p>
+            <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;" onchange="handleFileSelect()">
+        </div>
+        <div id="status-msg" style="color: #666; margin-bottom: 10px;">Connecting...</div>
+        <div id="scene-list" style="max-height: 400px; overflow-y: auto;"></div>
     </div>
 
     <div class="card" id="stage" style="display:none;">
         <div id="visual-box">
-            <div id="visual-loading-overlay">
-                <span id="loading-message">⏳ Generating Visuals...</span>
-            </div>
-            <div id="visual-icon">🖼️</div>
-            <div id="visual-desc">Visual Description...</div>
+            <div id="visual-loading-overlay"><span id="loading-message">⏳ Generating Visuals...</span></div>
+            <div id="visual-desc"></div>
         </div>
 
         <div id="narration-text">Loading lesson...</div>
         <audio id="audio-player" style="display:none;"></audio>
 
-        <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-            <label for="lang-select">Voice Language:</label>
-            <select id="lang-select">
-                <option value="en">English (Default)</option>
-                <option value="hi">हिन्दी (Hindi)</option>
-                <option value="kn">ಕನ್ನಡ (Kannada)</option>
-                <option value="sa">संस्कृत (Sanskrit)</option>
-            </select>
-            <button onclick="requestReexplain()" style="background:#f1c40f; color:#333; border:none; margin-left: 10px;">Re-Explain</button>
-            <button onclick="requestSocraticQuiz()" style="background:#2ecc71; color:white; border:none;">Quiz Me!</button>
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+            <button onclick="playPrevious()" style="background:#95a5a6; color:white; border:none; padding: 8px 15px; border-radius: 6px;">⬅ Back</button>
+            <button onclick="requestReexplain()" style="background:#f1c40f; color:#333; border:none; padding: 8px 15px; border-radius: 6px;">Re-Explain</button>
+            <button onclick="playNext()" style="background:#3498db; color:white; border:none; padding: 8px 25px; border-radius: 6px; font-weight: bold;">Next ➡</button>
         </div>
+    </div>
 
-        <div class="controls">
-            <!-- Back Button -->
-            <button onclick="playPrevious()" style="background:#95a5a6; color:white;">⬅ Back</button> 
-            
-            <button id="mic-btn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
-                🎤
-            </button>
-            <div class="status-bar" style="flex-grow: 1;">
-                <span id="status-text">Hold Mic to speak...</span>
-            </div>
-            <button onclick="playNext()" style="background:#3498db; color:white; border:none;">Next Segment ➡</button>
+    <div class="chat-bar-container">
+        <div class="chat-input-wrapper">
+            <button id="mic-btn-floating" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">🎤</button>
+            <input type="text" id="user-input" placeholder="Ask a question or search..." onkeypress="handleKeyPress(event)">
+            <button class="btn-send" onclick="sendTextMessage()">➤</button>
+        </div>
+        <div style="position: absolute; top: -30px; background: #333; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; display:none;" id="floating-status">
+            Ready
         </div>
     </div>
 
     <script>
-        // CORE CONFIG
-        const API_BASE = window.location.origin;
-        const API = API_BASE + "/api";
-        
+        const API = window.location.origin + "/api";
         let currentPlan = null;
         let currentSegmentIndex = 0;
-        let mediaRecorder;
-        let audioChunks = [];
-        let isRecording = false;
-        
-        let activeCatalogId = null;
-        let animationInterval = null;
-        
-        let allSceneIds = []; 
-        let currentSceneIndexInList = -1;
+        let mediaRecorder, audioChunks = [], isRecording = false;
+        let activeCatalogId = null, animationInterval = null;
+        let allSceneIds = [], currentSceneIndexInList = -1;
 
-        // --- INITIALIZATION ---
-        window.onload = async function() {
+        // --- 1. UPLOAD & INIT ---
+        window.onload = () => {
             const audio = document.getElementById('audio-player');
-            audio.onended = () => {
-                if (currentPlan) {
-                    playNext(true); // Auto-advance to the next segment/scene
-                }
-            };
+            // Auto-play next when audio ends (pass true for auto)
+            audio.onended = () => { if (currentPlan) playNext(true); };
             loadScenes();
         };
 
-        // --- LOAD LOGIC ---
-        async function loadScenes() {
-            const msg = document.getElementById('status-msg');
-            msg.innerText = "🔍 Finding latest book...";
-            allSceneIds = []; 
-            currentSceneIndexInList = -1;
-            
+        async function handleFileSelect() {
+            const file = document.getElementById('pdf-upload').files[0];
+            if (!file) return;
+            updateStatus("⏳ Uploading...");
+            const formData = new FormData();
+            formData.append('file', file);
             try {
-                const catRes = await fetch(`${API}/catalog/`);
-                if(!catRes.ok) throw new Error("Server not responding to Catalog API.");
-                const books = await catRes.json();
-
-                let foundScenes = false;
-                
-                for (let i = books.length - 1; i >= 0; i--) {
-                    const book = books[i];
-                    msg.innerText = `Checking book: "${book.title}"...`;
-
-                    const sceneRes = await fetch(`${API}/plan/list/${book.id}`);
-                    const scenes = await sceneRes.json();
-
-                    if (scenes.length > 0) {
-                        activeCatalogId = book.id;
-                        msg.innerHTML = `✅ Loaded <b>"${book.title}"</b> (${scenes.length} scenes)`;
-
-                        scenes.forEach((s, index) => {
-                            allSceneIds.push(s.id); 
-                            const btn = document.createElement('button');
-                            btn.className = 'scene-btn';
-                            btn.innerHTML = `<b>${s.title}</b>`;
-                            btn.onclick = () => startLesson(s.id, index); 
-                            document.getElementById('scene-list').appendChild(btn);
-                        });
-                        foundScenes = true;
-                        break;
-                    }
-                }
-
-                if (!foundScenes) {
-                    msg.innerHTML = "⚠️ No books found with Scenes. Please upload a PDF and wait for extraction.";
-                }
-
+                const res = await fetch(`${API}/catalog/upload`, { method: 'POST', body: formData });
+                if (!res.ok) throw new Error("Upload Failed");
+                updateStatus("✅ Uploaded! refreshing list...");
+                setTimeout(loadScenes, 1000); 
             } catch (e) {
-                msg.innerHTML = `❌ Connection Failed. Is the server running? (${e.message})`;
-                console.error("Initialization Error:", e);
+                alert("Upload Error: " + e.message);
+                updateStatus("❌ Error");
             }
         }
 
-        async function startLesson(sceneId, indexInList) {
-            currentSceneIndexInList = indexInList;
-            
+        async function loadScenes() {
+            try {
+                const res = await fetch(`${API}/catalog/`);
+                if (!res.ok) throw new Error("API Error");
+                const books = await res.json();
+                
+                const list = document.getElementById('scene-list');
+                list.innerHTML = "";
+                if (books.length === 0) {
+                    document.getElementById('status-msg').innerText = "Library empty. Upload a PDF!";
+                    return;
+                }
+                document.getElementById('status-msg').innerText = `Library (${books.length} books found)`;
+
+                books.forEach(book => {
+                    const div = document.createElement('div');
+                    div.className = 'scene-btn';
+                    div.innerHTML = `<b>📖 ${book.title}</b> <span style="font-size:0.8em; color:#888;">(ID: ${book.id})</span>`;
+                    div.onclick = () => loadBookScenes(book.id);
+                    list.appendChild(div);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadBookScenes(bookId) {
+            activeCatalogId = bookId;
+            updateStatus("Loading Book...");
+            try {
+                const res = await fetch(`${API}/plan/list/${bookId}`);
+                const scenes = await res.json();
+                if(scenes.length === 0) {
+                    alert("No scenes yet. Extraction might be in progress.");
+                    return;
+                }
+                // Store all IDs so we can auto-advance later
+                allSceneIds = scenes.map(s => s.id);
+                // Start First Scene
+                startLesson(allSceneIds[0], 0);
+            } catch(e) { alert("Error loading scenes: " + e.message); }
+        }
+
+        // --- 2. TEXT & SEARCH ---
+        function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
+
+        async function sendTextMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = ""; 
+
+            if (currentPlan && document.getElementById('stage').style.display !== 'none') {
+                processUserQuery(text);
+            } else {
+                const list = document.getElementById('scene-list');
+                const items = list.getElementsByClassName('scene-btn');
+                let found = 0;
+                for (let item of items) {
+                    if (item.innerText.toLowerCase().includes(text.toLowerCase())) {
+                        item.style.display = "block"; found++;
+                    } else { item.style.display = "none"; }
+                }
+                updateStatus(found > 0 ? `Found ${found} books` : "No books found");
+            }
+        }
+
+        // --- 3. LESSON LOGIC (FIXED) ---
+        async function startLesson(sceneId, index) {
+            currentSceneIndexInList = index;
             document.getElementById('setup-panel').style.display = 'none';
             document.getElementById('stage').style.display = 'block';
-            updateStatus("🤖 AI is writing lesson plan...");
             
-            currentPlan = null; 
-
+            updateStatus(`🎬 Playing Scene ${index + 1}...`);
             const res = await fetch(`${API}/plan/${sceneId}`, { method: 'POST' });
             currentPlan = await res.json();
             currentSegmentIndex = 0;
-            if(currentPlan.segments && currentPlan.segments.length > 0) {
-                playSegment(currentPlan.segments[0]);
+            if(currentPlan.segments.length > 0) playSegment(currentPlan.segments[0]);
+        }
+
+        async function playSegment(seg) {
+            document.getElementById('audio-player').pause();
+            if(animationInterval) clearInterval(animationInterval);
+            
+            document.getElementById('narration-text').innerText = seg.text;
+            document.getElementById('visual-loading-overlay').style.display = 'flex';
+            document.getElementById('visual-desc').style.display = 'none';
+            
+            const [audioRes, visRes] = await Promise.all([
+                fetch(`${API}/audio/speak`, { 
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ text: seg.text, lang: "en" })
+                }),
+                fetch(`${API}/visuals/generate`, { 
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ prompt: seg.visual.background })
+                })
+            ]);
+
+            const audioData = await audioRes.json();
+            const visData = await visRes.json();
+
+            const audio = document.getElementById('audio-player');
+            audio.src = API + "/.." + audioData.audio_url; 
+            audio.play();
+
+            document.getElementById('visual-loading-overlay').style.display = 'none';
+            const vBox = document.getElementById('visual-box');
+            if(visData.image_urls?.length > 0) {
+                let i = 0;
+                vBox.style.backgroundImage = `url(${API}/..${visData.image_urls[0]})`;
+                animationInterval = setInterval(() => {
+                    i = (i + 1) % visData.image_urls.length;
+                    vBox.style.backgroundImage = `url(${API}/..${visData.image_urls[i]})`;
+                }, 1500);
             }
         }
         
-        // --- CORE PLAYBACK LOOP (Movie Mode & Animation) ---
-        async function playSegment(seg) {
-            // 1. Cleanup
-            document.getElementById('audio-player').pause(); 
-            if (animationInterval) {
-                clearInterval(animationInterval);
-                animationInterval = null;
+        // --- KEY FIX HERE ---
+        function playNext(auto) {
+            if (!auto) { // Manual click pauses
+                document.getElementById('audio-player').pause();
+                if(animationInterval) clearInterval(animationInterval);
             }
             
-            // 2. Prepare UI for loading (Shows text, holds old image until ready)
-            document.getElementById('narration-text').innerText = seg.text;
-            document.getElementById('visual-loading-overlay').style.display = 'flex'; // Show loading overlay
-            document.getElementById('loading-message').innerText = "⏳ Generating Visuals...";
-            document.getElementById('visual-icon').style.display = 'none'; 
-            document.getElementById('visual-desc').style.display = 'none'; 
-            
-            updateStatus("🔊 Speaking & Generating Visuals...");
-
-            // Fetch requests run in parallel
-            const audioPromise = fetch(`${API}/audio/speak`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ text: seg.text, lang: document.getElementById('lang-select').value })
-            });
-            const visualPromise = fetch(`${API}/visuals/generate`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ prompt: seg.visual.background })
-            });
-
-            // Wait for both to finish
-            const [audioRes, visualRes] = await Promise.all([audioPromise, visualPromise]);
-            
-            // Audio Playback
-            const audioData = await audioRes.json();
-            const audio = document.getElementById('audio-player');
-            audio.src = API_BASE + audioData.audio_url; 
-            audio.play();
-
-            // Visual Update & Animation (Only occurs AFTER files are received)
-            const visualData = await visualRes.json();
-            const visualBox = document.getElementById('visual-box');
-            
-            if (visualRes.ok && visualData.image_urls && visualData.image_urls.length > 0) {
-                // Preload and start animation loop
-                document.getElementById('visual-loading-overlay').style.display = 'none'; 
-                document.getElementById('visual-desc').innerText = seg.visual.background; // Display new description
-                document.getElementById('visual-desc').style.display = 'block';
-                
-                const imageList = visualData.image_urls;
-                let currentFrameIndex = 0;
-                const frameRateMs = 1500; 
-
-                // Show first frame immediately
-                visualBox.style.backgroundImage = `url(${API_BASE + imageList[0]})`;
-
-                animationInterval = setInterval(() => {
-                    currentFrameIndex = (currentFrameIndex + 1) % imageList.length;
-                    visualBox.style.backgroundImage = `url(${API_BASE + imageList[currentFrameIndex]})`;
-                }, frameRateMs);
-
-            } else {
-                // VRAM CRASH/Error Handler
-                document.getElementById('visual-loading-overlay').style.display = 'none';
-                document.getElementById('visual-icon').style.display = 'block';
-                document.getElementById('visual-icon').innerText = "⚠️";
-                document.getElementById('visual-desc').innerText = visualData.detail || "Image generation failed (VRAM issue).";
-                visualBox.style.backgroundImage = 'none';
-                visualBox.style.background = '#e74c3c';
-            }
-        }
-
-        // --- NAVIGATION LOGIC (Movie Mode Autoplay) ---
-        function playNext(autoAdvance = false) {
-            if(!currentPlan) return;
-            
-            if (!autoAdvance) {
-                 // Manual click stops audio and animation instantly
-                 document.getElementById('audio-player').pause();
-                 if (animationInterval) clearInterval(animationInterval);
-                 animationInterval = null;
-            }
-            
-            // 1. Advance Segment
             currentSegmentIndex++;
             
-            if(currentSegmentIndex < currentPlan.segments.length) {
-                // A. Next segment in current scene
+            // 1. More segments in CURRENT scene?
+            if (currentPlan && currentSegmentIndex < currentPlan.segments.length) {
                 playSegment(currentPlan.segments[currentSegmentIndex]);
             } else {
-                // B. End of Current Scene - Check for Next Scene
-                if (currentSceneIndexInList < allSceneIds.length - 1) {
-                    const nextSceneId = allSceneIds[currentSceneIndexInList + 1];
-                    updateStatus("✅ Scene Complete. Auto-advancing to next scene...");
-                    startLesson(nextSceneId, currentSceneIndexInList + 1); 
+                // 2. More SCENES in the book?
+                if (allSceneIds.length > 0 && currentSceneIndexInList < allSceneIds.length - 1) {
+                    updateStatus("✅ Scene Complete. Loading next chapter...");
+                    // Auto-load next scene
+                    startLesson(allSceneIds[currentSceneIndexInList + 1], currentSceneIndexInList + 1);
                 } else {
-                    // C. End of Book
-                    updateStatus("📚 End of Book. All chapters reviewed.");
+                    updateStatus("📚 End of Book.");
                 }
             }
         }
 
         function playPrevious() {
             if (!currentPlan) return;
-
-            // Stop current playback
             document.getElementById('audio-player').pause();
             if (animationInterval) clearInterval(animationInterval);
-            animationInterval = null;
-
-            // 1. Check if we can go back one segment
             if (currentSegmentIndex > 0) {
                 currentSegmentIndex--;
                 playSegment(currentPlan.segments[currentSegmentIndex]);
-                
-            // 2. Check if we need to go back to the previous scene
             } else if (currentSceneIndexInList > 0) {
-                const prevSceneId = allSceneIds[currentSceneIndexInList - 1];
-                const prevSceneIndex = currentSceneIndexInList - 1;
-                updateStatus("⬅ Rewinding to previous scene...");
-                
-                // Restarting the previous scene will set its segment index to 0
-                startLesson(prevSceneId, prevSceneIndex); 
-                
-            } else {
-                updateStatus("Already at the start of the book.");
+                // Go to previous scene
+                startLesson(allSceneIds[currentSceneIndexInList - 1], currentSceneIndexInList - 1); 
             }
         }
 
-        // --- INTERACTIVE PAUSE / MICROPHONE LOGIC ---
-        function interruptPlayback() {
-            document.getElementById('audio-player').pause();
-            if (animationInterval) clearInterval(animationInterval);
-            animationInterval = null;
-            updateStatus("⏸️ Playback interrupted. Waiting for question...");
-        }
-        
-        function requestReexplain() {
-            const currentSegment = currentPlan.segments[currentSegmentIndex];
-            document.getElementById('narration-text').innerText = "AI: I will re-explain that point now.";
-            updateStatus("⏳ Re-explaining...");
-            playSegment(currentSegment);
-        }
-        
-        function requestSocraticQuiz() {
-            const currentQuestion = currentPlan.segments[currentSegmentIndex].checkpoint_question;
-            document.getElementById('narration-text').innerText = "AI: Here is your quiz question...";
-            updateStatus("⏳ Generating Quiz...");
-            alert("Quiz Time! The question is: " + (currentQuestion || "Please ask a question yourself!"));
-        }
-
-        async function startRecording() {
-            if(isRecording) return;
-            interruptPlayback(); // Pause the ongoing lesson!
-            
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            isRecording = true;
-            
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.start();
-            
-            document.getElementById('mic-btn').classList.add('recording');
-            updateStatus("👂 Listening... (Release to send)");
-        }
-
-        async function stopRecording() {
-            if(!isRecording || !mediaRecorder) return;
-            mediaRecorder.stop();
-            isRecording = false;
-            document.getElementById('mic-btn').classList.remove('recording');
-            updateStatus("⏳ Thinking...");
-            
-            // Clear animation during conversation
-            if (animationInterval) {
-                 clearInterval(animationInterval);
-                 animationInterval = null;
-            }
-            
-            mediaRecorder.onstop = async () => {
-                const blob = new Blob(audioChunks, { type: 'audio/wav' });
-                const formData = new FormData();
-                formData.append("file", blob, "input.wav");
-                
-                try {
-                    const transRes = await fetch(`${API}/listen/transcribe`, { method: 'POST', body: formData });
-                    const transData = await transRes.json();
-                    
-                    document.getElementById('narration-text').innerHTML = `<span style="color:#888;">You:</span> "${transData.text}"`;
-                    updateStatus("🤖 AI is formulating an answer...");
-                    
-                    const chatRes = await fetch(`${API}/chat/reply`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            question: transData.text,
-                            catalog_id: activeCatalogId
-                        })
-                    });
-                    const chatData = await chatRes.json();
-                    
-                    document.getElementById('narration-text').innerHTML += `<br><br><span style="color:#3498db;">AI:</span> "${chatData.text}"`;
-                    
-                    const audio = document.getElementById('audio-player');
-                    audio.src = API_BASE + chatData.audio_url;
-                    audio.play();
-                    
-                    // D. Resume lesson after response
-                    audio.onended = () => {
-                        updateStatus("✅ Answer complete. Resuming lesson.");
-                        playSegment(currentPlan.segments[currentSegmentIndex]); // Resume current segment
-                    };
-
-                } catch (e) {
-                    console.error("Full Loop Error:", e);
-                    updateStatus("❌ Error: See console for details.");
-                }
-            };
+        // --- 4. ASSISTANT ---
+        async function processUserQuery(text) {
+            document.getElementById('audio-player').pause(); 
+            updateStatus("🧠 AI Thinking...");
+            document.getElementById('narration-text').innerHTML = `<span style="color:#888;">You:</span> ${text}`;
+            try {
+                const res = await fetch(`${API}/chat/reply`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question: text, catalog_id: activeCatalogId })
+                });
+                const data = await res.json();
+                document.getElementById('narration-text').innerHTML += `<br><br><span style="color:#3498db;">AI:</span> ${data.text}`;
+                updateStatus("🗣️ Speaking...");
+                const audio = document.getElementById('audio-player');
+                audio.src = API + "/.." + data.audio_url;
+                audio.play();
+                audio.onended = () => {
+                    updateStatus("Resuming...");
+                    playSegment(currentPlan.segments[currentSegmentIndex]); 
+                };
+            } catch (e) { console.error(e); updateStatus("❌ Error"); }
         }
 
         function updateStatus(msg) {
-            document.getElementById('status-text').innerText = msg;
+            const el = document.getElementById('floating-status');
+            el.innerText = msg; el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
         }
-        
-        function getVisualIcon(action) {
-            if(action && action.includes("zoom")) return "🔍";
-            if(action && action.includes("pan")) return "↔️";
-            return "🖼️";
+
+        function requestReexplain() {
+            updateStatus("⏳ Re-explaining...");
+            playSegment(currentPlan.segments[currentSegmentIndex]);
+        }
+
+        function resetApp() {
+            document.getElementById('stage').style.display = 'none';
+            document.getElementById('setup-panel').style.display = 'block';
+            document.getElementById('audio-player').pause();
+            loadScenes();
+        }
+
+        async function startRecording() {
+            if (isRecording) return;
+            document.getElementById('audio-player').pause();
+            const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.start();
+            isRecording = true;
+            document.getElementById('mic-btn-floating').classList.add('recording');
+            updateStatus("Listening...");
+        }
+
+        async function stopRecording() {
+            if (!isRecording) return;
+            mediaRecorder.stop();
+            isRecording = false;
+            document.getElementById('mic-btn-floating').classList.remove('recording');
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(audioChunks, {type:'audio/wav'});
+                const fd = new FormData(); fd.append("file", blob, "input.wav");
+                updateStatus("Transcribing...");
+                const res = await fetch(`${API}/listen/transcribe`, {method:'POST', body:fd});
+                const data = await res.json();
+                processUserQuery(data.text);
+            };
         }
     </script>
 </body>

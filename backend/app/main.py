@@ -1,5 +1,9 @@
 import os
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, UploadFile, File, HTTPException # Ensure UploadFile and File are here
+import shutil
+import os
+import fitz # PyMuPDF
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -67,15 +71,45 @@ async def root():
     
     return {"error": "Frontend not found", "expected_path": index_path}
 
-# Debug Endpoint (for quick checks)
-@app.get("/debug/stats")
-def get_stats(db: Session = Depends(get_db)):
-    # Requires existing models (catalog, chunk, scene)
-    book_count = db.query(catalog.Catalog).count()
-    chunk_count = db.query(chunk.Chunk).count()
-    scene_count = db.query(scene.Scene).count()
-    return {
-        "total_books": book_count,
-        "total_chunks": chunk_count,
-        "total_scenes": scene_count
-    }
+# --- NEW: Upload Endpoint ---
+@app.post("/api/catalog/upload")
+async def upload_book(file: UploadFile = File(...)):
+    try:
+        # FIX 1: specific check to ensure filename is not None
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Filename is missing")
+        
+        filename = str(file.filename) # Explicitly treat as string
+        
+        # 1. Ensure directories exist
+        os.makedirs("storage", exist_ok=True)
+        
+        # 2. Save the file locally
+        file_path = f"storage/{filename}"
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # 3. Extract Text
+        doc = fitz.open(file_path)
+        full_text = ""
+        for page in doc:
+            # FIX 2: Explicitly cast to string to satisfy linter
+            text = page.get_text()
+            if text:
+                full_text += str(text)
+            
+        # 4. Generate a Simple ID
+        # Now using the safe 'filename' variable
+        book_id = filename.replace(".pdf", "").replace(" ", "_").lower()
+        
+        # 5. Save Metadata / Return Info
+        return {
+            "status": "success", 
+            "id": book_id, 
+            "title": filename.replace(".pdf", ""),
+            "path": file_path
+        }
+
+    except Exception as e:
+        print(f"Upload Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
